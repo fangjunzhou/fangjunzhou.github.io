@@ -1,0 +1,40 @@
+{{ define "main" }}
+<div class="list-container">
+    {{ partial "breadcrumbs.html" . }}
+
+    <h1>{{ .Title }}</h1>
+    {{ .Content }}
+
+    {{ $isPostsIndex := .Parent.IsHome }}
+    {{ if $isPostsIndex }}
+        {{ range first 10 .RegularPagesRecursive.ByDate.Reverse }}
+            {{ partial "post-entry.html" . }}
+        {{ end }}
+    {{ else }}
+        {{ $paginationSize := site.Params.paginationSize }}
+        {{ if le $paginationSize 0 }}
+            {{ $paginationSize = 1 }}
+        {{ end }}
+
+        {{ $paginator := .Paginate .RegularPagesRecursive $paginationSize }}
+        {{ range $paginator.Pages }}
+            {{ partial "post-entry.html" . }}
+        {{ end }}
+        {{ partial "pagination-controls.html" $paginator }}
+    {{ end }}
+
+    {{ if or $isPostsIndex .Sections }}
+        <section aria-labelledby="subdirectories-heading">
+            <h2 id="subdirectories-heading">Collections</h2>
+            <ul>
+                {{ if $isPostsIndex }}
+                    <li><a href="{{ relref . "./all.md" }}">View all posts</a></li>
+                {{ end }}
+                {{ range .Sections }}
+                    <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+                {{ end }}
+            </ul>
+        </section>
+    {{ end }}
+</div>
+{{ end }}
