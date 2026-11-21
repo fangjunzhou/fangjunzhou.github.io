@@ -1,0 +1,10 @@
+{{ if site.Params.breadcrumbs.enabled }}
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    {{- range .Ancestors.Reverse -}}
+      <a href="{{ .RelPermalink }}">{{ if .IsHome }}~{{ else }}{{ path.Base .RelPermalink | lower }}{{ end }}</a><span aria-hidden="true">/</span>
+    {{- end -}}
+    {{- if site.Params.breadcrumbs.showCurrentPage -}}
+      <a href="{{ .RelPermalink }}" aria-current="page">{{ path.Base .RelPermalink | lower }}</a>
+    {{- end -}}
+  </nav>
+{{ end }}

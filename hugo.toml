@@ -1,7 +1,29 @@
 baseURL = "https://fangjunzhou.github.io/"
 locale = "en-US"
-title = "Fangjun's Dev Blog"
+title = "Fangjun Zhou"
 theme = "typo"
 
 [params]
+# colorPalette = "catpuccin"
 showFooter = false
+homeCollection = "posts"
+paginationSize = 100
+listSummaries = true
+
+[[params.social]]
+name = "github"
+title = "GitHub"
+url = "https://github.com/fangjunzhou"
+
+[[params.social]]
+name = "linkedin"
+title = "LinkedIn"
+url = "https://www.linkedin.com/in/fangjun-zhou/"
+
+[[params.menu]]
+name = "home"
+url = "/"
+
+[[params.menu]]
+name = "posts"
+url = "/posts/"

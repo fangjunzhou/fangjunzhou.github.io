@@ -1,0 +1,14 @@
+<div class="header">
+  {{ if or .IsHome (not (.Param "hideHeader")) }}
+    <h1 class="header-title"><a href="{{ site.BaseURL }}">{{ site.Title }}</a></h1>
+    <nav class="header-menu" aria-label="Main menu">
+      {{ range site.Params.menu }}
+        {{ $path := strings.TrimSuffix "/" (urls.Parse .url).Path }}
+        {{ $active := eq $path (strings.TrimSuffix "/" $.RelPermalink) }}
+        <p class="small{{ if $active }} bold{{ end }}">
+          <a href="{{ .url }}"{{ if $active }} aria-current="page"{{ end }}{{ if .newTab }} target="_blank" rel="noopener noreferrer"{{ end }}>~{{ with $path }}/{{ strings.TrimPrefix "/" . | lower }}{{ end }}</a>
+        </p>
+      {{ end }}
+    </nav>
+  {{ end }}
+</div>
