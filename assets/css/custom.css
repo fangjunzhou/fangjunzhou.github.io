@@ -1,0 +1,16 @@
+.profile-photo {
+  display: block;
+  float: right;
+  width: 11rem;
+  max-width: 100%;
+  height: auto;
+  margin: 0 0 1rem 1.5rem;
+  border-radius: 0.5rem;
+}
+
+@media (max-width: 36rem) {
+  .profile-photo {
+    float: none;
+    margin: 0 auto 1rem;
+  }
+}

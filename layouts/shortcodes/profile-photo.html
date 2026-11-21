@@ -1,0 +1,3 @@
+{{- $photo := resources.Get "images/fangjun-zhou.jpg" -}}
+{{- $portrait := ($photo.Crop "1500x1600 Center").Resize "480x jpg q85" -}}
+<img class="profile-photo" src="{{ $portrait.RelPermalink }}" width="{{ $portrait.Width }}" height="{{ $portrait.Height }}" alt="Fangjun Zhou in Stanford graduation robes">
