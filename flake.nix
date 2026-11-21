@@ -18,6 +18,7 @@
           themes = pkgs.linkFarm "hugo-themes" [{ name = "typo"; path = typo; }];
           preview = pkgs.writeShellScript "preview-site" ''
             exec ${pkgs.hugo}/bin/hugo server --themesDir "${themes}" \
+              --poll 500ms --disableFastRender \
               --baseURL http://127.0.0.1/ --bind 127.0.0.1 "$@"
           '';
         in {
