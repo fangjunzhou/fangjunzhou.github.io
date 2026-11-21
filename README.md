@@ -13,3 +13,7 @@ Leave `nix run` running while you edit. Saving `content/_index.md` rebuilds the 
 To preview on a different port, run `nix run . -- --port 8000`. Add new site files to Git before running the production build so Nix includes them.
 
 Create a draft with `nix develop -c hugo new content posts/my-first-post.md`. Preview drafts with `nix run . -- --buildDrafts`. Set `draft = false` when the post is ready to appear on the homepage and at `/posts/`.
+
+## Deployment
+
+In the repository’s **Settings → Pages**, select **GitHub Actions** as the build source. Each push to `main` then builds the site with Nix and publishes it to <https://fangjunzhou.github.io/>. To redeploy the current version, run the **Deploy homepage** workflow on `main` from the Actions tab.
