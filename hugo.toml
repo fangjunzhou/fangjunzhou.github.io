@@ -1,0 +1,7 @@
+baseURL = "https://fangjunzhou.github.io/"
+locale = "en-US"
+title = "Fangjun's Dev Blog"
+theme = "typo"
+
+[params]
+showFooter = false
