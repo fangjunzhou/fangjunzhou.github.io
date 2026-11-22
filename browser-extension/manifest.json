@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Blog Markdown Reference",
+  "version": "1.1.0",
+  "description": "Copy the Markdown file and line numbers for text and media on Fangjun Zhou's blog.",
+  "permissions": ["contextMenus", "clipboardWrite"],
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "commands": {
+    "copy-markdown-reference": {
+      "description": "Copy Markdown reference"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "markdown-reference@fangjunzhou.github.io",
+      "strict_min_version": "121.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://fangjunzhou.github.io/posts/*",
+        "http://127.0.0.1/posts/*",
+        "http://localhost/posts/*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
+}

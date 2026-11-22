@@ -1,0 +1,60 @@
+{{- $path := .path -}}
+{{- $lines := split .body "\n" -}}
+{{- $frontMatterLines := .frontMatterLines -}}
+{{- $records := slice -}}
+{{- $skipThrough := -1 -}}
+{{- $fence := "" -}}
+{{- range $i, $line := $lines -}}
+  {{- if le $i $skipThrough -}}{{- continue -}}{{- end -}}
+  {{- $first := add $frontMatterLines $i 1 -}}
+  {{- $line = strings.TrimSpace $line -}}
+  {{- if and $fence (hasPrefix $line $fence) -}}
+    {{- $fence = "" -}}
+    {{- continue -}}
+  {{- else if not $fence -}}
+    {{- with findRE "^(?:`{3,}|~{3,})" $line 1 -}}
+      {{- $fence = index . 0 -}}
+      {{- continue -}}
+    {{- end -}}
+    {{- if hasPrefix $line "<!--" -}}
+      {{- $comment := index (split (delimit (after $i $lines) "\n") "-->") 0 -}}
+      {{- $skipThrough = add $i (sub (len (split $comment "\n")) 1) -}}
+      {{- continue -}}
+    {{- end -}}
+    {{- if findRE `^\{\{[<%]` $line -}}
+      {{- $rest := delimit (after $i $lines) "\n" -}}
+      {{- $tag := index (split $rest (cond (hasPrefix $line "{{<") ">}}" "%}}")) 0 -}}
+      {{- $skipThrough = add $i (sub (len (split $tag "\n")) 1) -}}
+      {{- if findRE `^\s*\{\{[<%]\s*(?:figure|post-video)\s` $tag -}}
+        {{- range findRESubmatch `\bsrc\s*=\s*["\x60]([^"\x60]+)["\x60]` $tag 1 -}}
+          {{- $last := add $frontMatterLines $skipThrough 1 -}}
+          {{- /* Include the adjacent closing tag for the last figure in a row. */ -}}
+          {{- $next := add $skipThrough 1 -}}
+          {{- if and (lt $next (len $lines)) (findRE `^\s*\{\{[<%]\s*/figure-row\s*[>%]\}\}` (index $lines $next)) -}}
+            {{- $last = add $last 1 -}}
+          {{- end -}}
+          {{- $records = $records | append (dict "first" $first "last" $last "media" (index . 1)) -}}
+        {{- end -}}
+      {{- end -}}
+      {{- continue -}}
+    {{- end -}}
+    {{- range findRESubmatch `!\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))` $line -}}
+      {{- $records = $records | append (dict "first" $first "last" $first "media" (or (index . 1) (index . 2))) -}}
+    {{- end -}}
+    {{- $line = replaceRE `<!--.*?-->` "" $line -}}
+    {{- $line = replaceRE `!\[[^\]]*\]\([^)]*\)` "" $line -}}
+    {{- $line = replaceRE `\[([^\[\]]+)\]\((?:[^()]|\([^()]*\))*\)` "$1" $line -}}
+    {{- $line = replaceRE `\[([^\[\]]+)\]\[[^\[\]]*\]` "$1" $line -}}
+    {{- $line = replaceRE `^(?:>\s*)+(?:\s*)|\s*\{[^{}]*\}$` "" $line -}}
+    {{- $line = replaceRE `^(?:[-+*]|\d+[.)])\s+` "" $line -}}
+    {{- if findRE `^\[[^\]]+\]:` $line -}}{{- continue -}}{{- end -}}
+  {{- end -}}
+  {{- $text := delimit (findRE `[\p{L}\p{N}\p{M}]+` (htmlUnescape $line)) " " -}}
+  {{- with $text -}}
+    {{- $records = $records | append (dict "first" $first "last" $first "text" .) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with $records }}
+  <script type="application/json" id="markdown-reference-data">{{ dict "path" $path "records" . | jsonify | safeJS }}</script>
+{{- end }}

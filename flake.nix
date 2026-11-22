@@ -21,6 +21,17 @@
               --poll 500ms --disableFastRender \
               --baseURL http://127.0.0.1/ --bind 127.0.0.1 "$@"
           '';
+          browserExtension = pkgs.runCommand "blog-markdown-reference" {
+            nativeBuildInputs = [ pkgs.zip ];
+          } ''
+            extension="$out/share/blog-markdown-reference"
+            mkdir -p "$extension"
+            cp ${./browser-extension}/{manifest.json,background.js,content.js} "$extension/"
+            cd "$extension"
+            TZ=UTC touch -t 198001010000 manifest.json background.js content.js
+            TZ=UTC zip -qX "$out/blog-markdown-reference.zip" manifest.json background.js content.js
+            cp "$out/blog-markdown-reference.zip" "$out/blog-markdown-reference.xpi"
+          '';
         in {
           packages.default = pkgs.stdenvNoCC.mkDerivation {
             name = "fangjunzhou.github.io";
@@ -31,6 +42,7 @@
             '';
             dontInstall = true;
           };
+          packages.browser-extension = browserExtension;
 
           apps.default = {
             type = "app";

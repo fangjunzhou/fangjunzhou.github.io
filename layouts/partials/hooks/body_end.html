@@ -1,0 +1,14 @@
+{{- if and .IsPage (eq .Section "posts") .RawContent -}}
+  {{- with .File -}}
+    {{- if in (slice "md" "markdown" "mdown") .Ext -}}
+      {{- $path := path.Join "content" .Path -}}
+      {{- $body := $.RawContent -}}
+      {{- $source := try (readFile $path) -}}
+      {{- /* During a live rebuild the source file and Hugo's page may be from different saves. */ -}}
+      {{- if and $source.Value (hasSuffix $source.Value $body) -}}
+        {{- $frontMatter := strings.TrimSuffix $body $source.Value -}}
+        {{- partial "markdown-reference.html" (dict "path" $path "body" $body "frontMatterLines" (strings.Count "\n" $frontMatter)) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
