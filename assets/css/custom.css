@@ -14,3 +14,23 @@
     margin: 0 auto 1rem;
   }
 }
+
+.figure-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.5rem, 2vw, 1rem);
+  margin-block: 1rem;
+}
+
+.figure-row > figure {
+  margin: 0;
+}
+
+.figure-row figcaption {
+  margin: 0.5rem 0 0;
+  padding-inline: 0;
+}
+
+.figure-row figcaption p {
+  margin: 0;
+}
