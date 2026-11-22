@@ -3,3 +3,13 @@ name = "frechet-distance-visualizations"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = ["manim>=0.19.0", "numpy"]
+
+[project.optional-dependencies]
+imagenet-pca = [
+    "datasets>=5.2",
+    "huggingface-hub",
+    "matplotlib",
+    "pillow",
+    "pytorch-fid==0.3.0",
+    "torch",
+]

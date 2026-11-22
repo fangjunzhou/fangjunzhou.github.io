@@ -402,6 +402,22 @@ $$
 
 {{< post-video src="media/reading-notes/frechet-distance/frechet-computation.mp4" poster="media/reading-notes/frechet-distance/frechet-computation-poster.png" label="Computing the squared Fréchet distance between two 2D Gaussian fits with the SVD pairing" caption="For these tilted fits, the SVD lowers the centered spread cost from 1.946 to 1.501. The dashed line marks the analytical squared distance, including the mean shift." >}}
 
+## Elephant in the room: Does it make sense to assume images are Gaussian distributed?
+
+Now that we've worked through the Fréchet distance derivation in FID, let's go back to the assumption we made about the encoded image features. Does it make sense to treat them as Gaussian distributed?
+
+Well, we can run a simple experiment to find out. I ran the Inception-v3 feature extractor on 8,192 images from the ImageNetV2 Matched Frequency test set. That gave me a 2,048-dimensional feature vector for each image. Then I used principal component analysis (PCA) to project those features onto a 2D plane.
+
+I picked a few points around the plot to see which images they came from.
+
+{{< post-video src="media/reading-notes/frechet-distance/imagenet-pca-inspection.mp4" poster="media/reading-notes/frechet-distance/imagenet-pca-inspection-poster.png" label="Animation of the ImageNetV2 PCA plot with the source images for four selected points" caption="PC1 explains 6.7% of the variance in the original features, and PC2 explains 1.9%." >}}
+
+A Gaussian seems like a reasonable fit for the main cloud, at least in this plane. The points do have a longer tail on the left.
+
+In the original FID paper, Heusel and colleagues compared clean CelebA images with increasingly altered versions of the dataset. FID generally went up as the altered set looked less like the original, which is what you'd want from a distance between image sets. [Heusel et al. (2017), Figure 3](https://proceedings.neurips.cc/paper_files/paper/2017/file/8a1d694707eb0fefe65871369074926d-Paper.pdf#page=6)
+
+{{< figure src="media/reading-notes/frechet-distance/heusel-fid-figure-3.png" alt="Six plots of FID against disturbance level, with example images above each plot." width="1950" height="858" caption="Figure 3 from Heusel et al. (2017)." >}}
+
 ## References
 
 - Martin Heusel, Hubert Ramsauer, Thomas Unterthiner, Bernhard Nessler, and Sepp Hochreiter. NeurIPS 2017. [*GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium*](https://proceedings.neurips.cc/paper/2017/hash/8a1d694707eb0fefe65871369074926d-Abstract.html).
