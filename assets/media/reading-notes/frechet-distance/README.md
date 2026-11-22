@@ -1,44 +1,62 @@
 # FID visualizations
 
-Run this command from the repository root to render the animations. The Nix development shell provides uv, Python, Cairo, Pango, and the LaTeX tools Manim uses to render its Computer Modern labels.
+Each scene has its own file in `scenes/`. The Nix development shell provides uv, Python, Cairo, Pango, and the LaTeX tools Manim uses to render its Computer Modern labels.
+
+From the repository root, pass a scene file to Manim to render it.
 
 ```sh
 nix develop -c uv run --locked --package frechet-distance-visualizations \
-  manim -qm assets/media/reading-notes/frechet-distance/scenes.py \
-  AverageLogLikelihood SparseGaussianMixture LatentVariableLikelihood FrechetMonteCarlo \
-  GaussianPairings IdenticalGaussianPairings FrechetDistanceBreakdown
+  manim -qm assets/media/reading-notes/frechet-distance/scenes/average_log_likelihood.py
 ```
 
-Manim writes the videos to `media/videos/scenes/720p30/`. The scenes use the [Catppuccin Mocha palette](https://catppuccin.com/palette/#mocha).
+To render all the animations, run them in the same Nix shell.
+
+```sh
+nix develop -c bash -e <<'SH'
+scene_dir=assets/media/reading-notes/frechet-distance/scenes
+for scene in average_log_likelihood sparse_gaussian_mixture latent_variable_likelihood \
+  frechet_monte_carlo gaussian_pairings identical_gaussian_pairings frechet_distance_breakdown \
+  shared_gaussian_draw rotated_gaussian_draw svd_gaussian_pairing frechet_computation
+do
+  uv run --locked --package frechet-distance-visualizations manim -qm "$scene_dir/$scene.py"
+done
+SH
+```
+
+Manim writes each video to `media/videos/<scene-file-stem>/720p30/`. The scenes use the [Catppuccin Mocha palette](https://catppuccin.com/palette/#mocha).
 
 To update the videos and preview images embedded in the post, run these FFmpeg commands from the repository root after rendering.
 
 ```sh
-video_dir=media/videos/scenes/720p30
 asset_dir=assets/media/reading-notes/frechet-distance
-ffmpeg -y -i "$video_dir/AverageLogLikelihood.mp4" -c copy -movflags +faststart "$asset_dir/average-log-likelihood.mp4"
-ffmpeg -y -ss 10.4 -i "$video_dir/AverageLogLikelihood.mp4" -frames:v 1 "$asset_dir/average-log-likelihood-poster.png"
-ffmpeg -y -i "$video_dir/SparseGaussianMixture.mp4" -c copy -movflags +faststart "$asset_dir/sparse-gaussian-mixture.mp4"
-ffmpeg -y -ss 8.6 -i "$video_dir/SparseGaussianMixture.mp4" -frames:v 1 "$asset_dir/sparse-gaussian-mixture-poster.png"
-ffmpeg -y -i "$video_dir/LatentVariableLikelihood.mp4" -c copy -movflags +faststart "$asset_dir/latent-variable-likelihood.mp4"
-ffmpeg -y -ss 25.8 -i "$video_dir/LatentVariableLikelihood.mp4" -frames:v 1 "$asset_dir/latent-variable-likelihood-poster.png"
-ffmpeg -y -i "$video_dir/FrechetMonteCarlo.mp4" -c copy -movflags +faststart "$asset_dir/frechet-monte-carlo.mp4"
-ffmpeg -y -ss 16.8 -i "$video_dir/FrechetMonteCarlo.mp4" -frames:v 1 "$asset_dir/frechet-monte-carlo-poster.png"
-ffmpeg -y -i "$video_dir/GaussianPairings.mp4" -c copy -movflags +faststart "$asset_dir/gaussian-pairings.mp4"
-ffmpeg -y -ss 14.2 -i "$video_dir/GaussianPairings.mp4" -frames:v 1 -update 1 "$asset_dir/gaussian-pairings-poster.png"
-ffmpeg -y -i "$video_dir/IdenticalGaussianPairings.mp4" -c copy -movflags +faststart "$asset_dir/identical-gaussian-pairings.mp4"
-ffmpeg -y -ss 25.1 -i "$video_dir/IdenticalGaussianPairings.mp4" -frames:v 1 -update 1 "$asset_dir/identical-gaussian-pairings-poster.png"
-ffmpeg -y -i "$video_dir/FrechetDistanceBreakdown.mp4" -c copy -movflags +faststart "$asset_dir/frechet-distance-breakdown.mp4"
-ffmpeg -y -ss 4.9 -i "$video_dir/FrechetDistanceBreakdown.mp4" -frames:v 1 -update 1 "$asset_dir/frechet-distance-breakdown-poster.png"
+
+publish_animation() {
+  video="media/videos/$1/720p30/$2.mp4"
+  asset="$asset_dir/$3"
+  ffmpeg -y -i "$video" -c copy -movflags +faststart "$asset.mp4"
+  ffmpeg -y -ss "$4" -i "$video" -frames:v 1 -update 1 "$asset-poster.png"
+}
+
+publish_animation average_log_likelihood AverageLogLikelihood average-log-likelihood 10.4
+publish_animation sparse_gaussian_mixture SparseGaussianMixture sparse-gaussian-mixture 8.6
+publish_animation latent_variable_likelihood LatentVariableLikelihood latent-variable-likelihood 25.8
+publish_animation frechet_monte_carlo FrechetMonteCarlo frechet-monte-carlo 16.8
+publish_animation gaussian_pairings GaussianPairings gaussian-pairings 14.2
+publish_animation identical_gaussian_pairings IdenticalGaussianPairings identical-gaussian-pairings 25.1
+publish_animation frechet_distance_breakdown FrechetDistanceBreakdown frechet-distance-breakdown 4.9
+publish_animation shared_gaussian_draw SharedGaussianDraw shared-gaussian-draw 20.3
+publish_animation rotated_gaussian_draw RotatedGaussianDraw rotated-gaussian-draw 6.7
+publish_animation svd_gaussian_pairing SvdGaussianPairing svd-gaussian-pairing 18.7
+publish_animation frechet_computation FrechetComputation frechet-computation 22.2
 ```
 
 Use this command to render the figure comparing distributions with the same mean and covariance.
 
 ```sh
 nix develop -c uv run --locked --package frechet-distance-visualizations \
-  manim -qh -s -o matching-gaussian-moments assets/media/reading-notes/frechet-distance/scenes.py \
-  MatchingGaussianMoments
-cp media/images/scenes/matching-gaussian-moments.png assets/media/reading-notes/frechet-distance/
+  manim -qh -s -o matching-gaussian-moments \
+  assets/media/reading-notes/frechet-distance/scenes/matching_gaussian_moments.py
+cp media/images/matching_gaussian_moments/matching-gaussian-moments.png assets/media/reading-notes/frechet-distance/
 ```
 
 If you already have uv, Manim's system dependencies, LaTeX, and dvisvgm, you can run the same command starting at `uv run`. [Manim installation guide](https://docs.manim.community/en/stable/installation/uv.html)
