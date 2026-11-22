@@ -34,3 +34,13 @@
 .figure-row figcaption p {
   margin: 0;
 }
+
+.post-video {
+  margin-block: 1rem;
+}
+
+.post-video video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}

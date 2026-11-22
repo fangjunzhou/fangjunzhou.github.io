@@ -8,6 +8,8 @@ Fangjun Zhou's personal homepage, built with Hugo and the [Typo theme](https://g
 | `nix run` | Preview the working tree at <http://127.0.0.1:1313/> with live reload. |
 | `nix develop` | Start a shell with Hugo, Git, and the pinned theme available. |
 
+If direnv is hooked into your shell, run `direnv allow` once from the repository root. Entering the directory then loads the Nix development shell, syncs the locked uv workspace using the flake's Python, and activates `.venv`.
+
 Leave `nix run` running while you edit. Saving `content/_index.md` rebuilds the site and refreshes the open homepage automatically.
 
 To preview on a different port, run `nix run . -- --port 8000`. Add new site files to Git before running the production build so Nix includes them.

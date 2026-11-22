@@ -2,3 +2,8 @@
 /public/
 /resources/_gen/
 /result
+/.direnv/
+/.venv/
+__pycache__/
+/media/
+/assets/media/reading-notes/frechet-distance/media/
