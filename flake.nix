@@ -39,7 +39,21 @@
           };
 
           devShells.default = pkgs.mkShell {
-            packages = [ pkgs.hugo pkgs.git ];
+            packages = [
+              pkgs.hugo
+              pkgs.git
+              pkgs.uv
+              pkgs.python313
+              pkgs.pkg-config
+              pkgs.cairo
+              pkgs.pango
+              (pkgs.texlive.withPackages (tex: [
+                tex.scheme-basic
+                tex.standalone
+                tex.preview
+                tex.dvisvgm
+              ]))
+            ];
             HUGO_THEMESDIR = themes;
           };
         });

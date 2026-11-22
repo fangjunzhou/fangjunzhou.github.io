@@ -1,0 +1,9 @@
+{{- $video := resources.Get (.Get "src") -}}
+{{- $poster := resources.Get (.Get "poster") -}}
+<figure class="post-video">
+  <video controls playsinline preload="metadata" width="{{ $poster.Width }}" height="{{ $poster.Height }}" poster="{{ $poster.RelPermalink }}" aria-label="{{ .Get "label" }}">
+    <source src="{{ $video.RelPermalink }}" type="video/mp4">
+    <a href="{{ $video.RelPermalink }}">Download the animation</a>
+  </video>
+  <figcaption>{{ .Get "caption" }}</figcaption>
+</figure>

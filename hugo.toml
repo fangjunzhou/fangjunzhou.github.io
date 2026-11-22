@@ -3,8 +3,16 @@ locale = "en-US"
 title = "Fangjun Zhou"
 theme = "typo"
 
+[markup.goldmark.extensions.passthrough]
+enable = true
+
+[markup.goldmark.extensions.passthrough.delimiters]
+block = [['$$', '$$'], ['\[', '\]']]
+inline = [['$', '$'], ['\(', '\)']]
+
 [params]
 # colorPalette = "catpuccin"
+math = true
 showFooter = false
 homeCollection = "posts"
 paginationSize = 100
