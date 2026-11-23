@@ -5,7 +5,7 @@
 
   const { path, records } = JSON.parse(sourceData.textContent);
   const mediaSelector = "img, video, audio";
-  const blockSelector = "p, h1, h2, h3, h4, h5, h6, li, dt, dd, tr, pre, .katex-display";
+  const blockSelector = "p, h1, h2, h3, h4, h5, h6, li, dt, dd, tr, pre, summary, .katex-display";
   const wordPattern = /[\p{L}\p{N}\p{M}]+/gu;
 
   // Collect DOM offsets alongside text so a selection within a wrapped

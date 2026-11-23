@@ -5,18 +5,22 @@ from statistics import NormalDist
 import numpy as np
 from manim import (
     DEGREES,
+    DL,
     DOWN,
     LEFT,
     RIGHT,
     UP,
+    UR,
     Arrow,
     Circle,
     DecimalNumber,
+    Dot,
     FadeIn,
     FadeOut,
     Group,
     Integer,
     LaggedStart,
+    Line,
     MathTex,
     MobjectTable,
     Scene,
@@ -34,6 +38,7 @@ from scene_helpers import (
     BASE,
     BLUE,
     COMPONENT_COLORS,
+    CRUST,
     GREEN,
     LIMIT,
     Mixture,
@@ -144,60 +149,27 @@ class LatentVariableLikelihood(Scene):
         )
         self.wait(0.75)
 
-        # The same within-band quantile in three bands gives the exact same prediction.
-        component = 2
-        anchors = [
-            (normal.inv_cdf((repeat * len(model) + component + 0.5) / (3 * len(model))), 0.25)
-            for repeat in range(3)
-        ]
-        _, common_prediction = latent_prediction(anchors[0], model, normal)
-        sources = sample_dots(prior_image, anchors, TEXT, radius=0.073)
-        destination = sample_dots(
-            prediction_image, [common_prediction], TEXT, radius=0.073, limit=output_limit
-        )[0]
-        destination_ring = Circle(radius=0.15, color=TEXT, stroke_width=2.1)
-        destination_ring.move_to(destination)
-        many_to_one_note = text_label("Different latent points can give the same prediction.", 31, TEXT)
-        self.play(
-            FadeIn(sources),
-            Transform(footer, many_to_one_note.move_to(footer)),
-            run_time=0.55,
-        )
-        copies = [destination.copy() for _ in sources]
-        self.play(
-            LaggedStart(
-                *(TransformFromCopy(source, copy, path_arc=-15 * DEGREES)
-                  for source, copy in zip(sources, copies, strict=True)),
-                lag_ratio=0.28,
-            ),
-            run_time=1.65,
-        )
-        self.remove(*copies)
-        self.add(destination)
-        self.play(FadeIn(destination_ring), run_time=0.4)
-        self.wait(1.0)
-
         sigma = 0.16
-        kernel = gaussian_blob(GREEN).scale_to_fit_width(
-            8 * sigma * prediction_image.width / (2 * output_limit)
-        ).move_to(destination)
-        conditional = MathTex(
-            r"p_\theta(x_i\mid z_j)=\mathcal{N}(x_i;\,G_\theta(z_j),\,\sigma^2 I)",
-            r"\qquad \sigma=0.16",
-            font_size=33,
-            color=TEXT,
-        ).move_to(footer)
+        offsets = np.asarray(test_points)[:, None, :] - np.asarray(predictions)
+        squared_distances = np.sum((offsets / sigma) ** 2, axis=-1)
+        conditional_values = np.exp(-0.5 * squared_distances) / (2 * pi * sigma**2)
+        nearest = int(np.argmin(squared_distances[0]))
+        match_count = int(np.count_nonzero(np.all(offsets[0] == 0, axis=1)))
+        mapped_view = (prior_panel, mapping, prediction_panel, prior_dots, prediction_dots)
         self.play(
-            FadeOut(sources), FadeOut(destination_ring), FadeOut(footer),
-            FadeIn(kernel), FadeIn(conditional), run_time=0.7,
+            *(FadeOut(part) for part in mapped_view), FadeOut(footer), run_time=0.45,
         )
-        self.wait(1.5)
+        self.compare_decoders(
+            offsets[0, nearest], nearest + 1, conditional_values[0, nearest],
+            sigma, match_count, len(latent_points),
+        )
+
         integral = MathTex(
             r"p_\theta(x_i)", "=", r"\int", r"p_\theta(x_i\mid z)", r"p(z)\,\mathrm dz",
             font_size=39,
             color=TEXT,
-        ).move_to(conditional)
-        self.play(FadeOut(kernel), FadeOut(destination), FadeOut(conditional), FadeIn(integral), run_time=0.65)
+        ).move_to(footer)
+        self.play(*(FadeIn(part) for part in mapped_view), FadeIn(integral), run_time=0.65)
         self.wait(1.5)
         estimate = MathTex(
             r"p_\theta(x_i)", r"\approx", r"\frac{1}{M}\sum_{j=1}^{M}",
@@ -222,8 +194,6 @@ class LatentVariableLikelihood(Scene):
         )
         self.wait(0.8)
 
-        offsets = np.asarray(test_points)[:, None, :] - np.asarray(predictions)
-        conditional_values = np.exp(-0.5 * np.sum((offsets / sigma) ** 2, axis=-1)) / (2 * pi * sigma**2)
         test_dots = sample_dots(
             prediction_image, test_points, YELLOW, radius=TEST_DOT_RADIUS, limit=output_limit
         )
@@ -242,6 +212,55 @@ class LatentVariableLikelihood(Scene):
             FadeOut(estimate), FadeOut(test_dots), run_time=0.7,
         )
         self.show_likelihood_table(conditional_values)
+
+    def compare_decoders(self, offset, draw_number, density, sigma, matches, sample_count):
+        title = text_label("Scoring the same test point", 43, TEXT, bold=True).to_edge(UP, buff=0.45)
+        frame = Square(
+            side_length=4.2, stroke_color=SURFACE, stroke_width=1.8,
+            fill_color=CRUST, fill_opacity=1,
+        ).move_to(LEFT * 3.25 + DOWN * 0.25)
+        plot_label = text_label("Closest sampled prediction", 28, SUBTEXT).next_to(frame, UP, buff=0.18)
+
+        # The close-up spans four standard deviations on each side of the prediction.
+        scale = frame.width / (8 * sigma)
+        prediction = Dot(frame.get_center(), radius=0.07, color=GREEN)
+        test = Dot(
+            prediction.get_center() + scale * (offset[0] * RIGHT + offset[1] * UP),
+            radius=0.07, color=YELLOW,
+        )
+        gap = Line(prediction.get_center(), test.get_center(), color=SUBTEXT, stroke_width=1.5)
+        prediction_label = MathTex(
+            rf"G_\theta(z_{{{draw_number}}})", font_size=33, color=GREEN,
+        ).next_to(prediction, DL, buff=0.15)
+        test_label = MathTex(r"x_1", font_size=36, color=YELLOW).next_to(test, UR, buff=0.15)
+        markers = VGroup(prediction, test, prediction_label, test_label).set_z_index(2)
+
+        deterministic = VGroup(
+            text_label("Deterministic decoder", 37, TEXT, bold=True),
+            text_label("Each latent gives one prediction.", 30, SUBTEXT),
+            MathTex(rf"{matches}\text{{ of }}{sample_count}\text{{ exact matches}}", font_size=36, color=YELLOW),
+            text_label("Even the closest prediction misses.", 28, SUBTEXT),
+        ).arrange(DOWN, buff=0.30, aligned_edge=LEFT).move_to(RIGHT * 0.05, aligned_edge=LEFT)
+        self.play(
+            FadeIn(title), FadeIn(frame), FadeIn(plot_label), FadeIn(gap),
+            FadeIn(markers), FadeIn(deterministic), run_time=0.65,
+        )
+        self.wait(2.2)
+
+        gaussian = VGroup(
+            text_label("Narrow Gaussian decoder", 37, TEXT, bold=True),
+            text_label(rf"Same prediction, with $\sigma={sigma:g}$.", 30, SUBTEXT),
+            MathTex(rf"p_\theta(x_1\mid z_{{{draw_number}}})\approx {density:.2f}", font_size=36, color=GREEN),
+            text_label("The near miss now contributes.", 28, SUBTEXT),
+        ).arrange(DOWN, buff=0.30, aligned_edge=LEFT)
+        gaussian.match_x(deterministic, LEFT).match_y(deterministic, UP)
+        kernel = gaussian_blob(GREEN).scale_to_fit_width(frame.width).move_to(prediction).set_z_index(1)
+        self.play(FadeOut(deterministic), FadeOut(gap), FadeIn(kernel), FadeIn(gaussian), run_time=0.65)
+        self.wait(2.4)
+        self.play(
+            FadeOut(title), FadeOut(frame), FadeOut(plot_label), FadeOut(markers),
+            FadeOut(kernel), FadeOut(gaussian), run_time=0.45,
+        )
 
     def evaluate_test_points(
         self, prior_view, prediction_view, estimate, test_dots, conditional_values, sigma, kernel_width
@@ -345,7 +364,21 @@ class LatentVariableLikelihood(Scene):
             sweep = Group(tile_grid, cursor, probe, count_line, sum_line)
             self.play(UpdateFromAlphaFunc(sweep, reveal_terms, rate_func=linear), run_time=3.3 if i == 1 else 2.2)
             self.play(FadeIn(result), run_time=0.55)
-            self.wait(1.1 if i == 1 else 0.65)
+            if i == 1:
+                largest = np.argsort(values)[-3:]
+                share = 100 * float(values[largest].sum() / values.sum())
+                contribution = text_label(
+                    rf"3 draws supply {share:.1f}\% of the sum.", 25, YELLOW,
+                ).move_to(tile_caption)
+                original_caption = tile_caption.copy()
+                self.play(
+                    *(tile_grid[j].animate.set_stroke(YELLOW, width=1.8) for j in largest),
+                    Transform(tile_caption, contribution), run_time=0.45,
+                )
+                self.wait(1.9)
+                self.play(Transform(tile_caption, original_caption), run_time=0.35)
+            else:
+                self.wait(0.65)
             self.play(FadeOut(sweep), FadeOut(result), FadeOut(test_ring), FadeOut(test_label), run_time=0.35)
         self.play(FadeOut(tile_heading), FadeOut(tile_caption), run_time=0.35)
 

@@ -21,7 +21,10 @@
       {{- $skipThrough = add $i (sub (len (split $comment "\n")) 1) -}}
       {{- continue -}}
     {{- end -}}
-    {{- if findRE `^\{\{[<%]` $line -}}
+    {{- $summary := findRESubmatch `^\{\{<\s*rawhtml\s*>\}\}\s*<details\b[^>]*>\s*<summary\b[^>]*>(.*?)</summary>` $line 1 -}}
+    {{- if $summary -}}
+      {{- $line = index $summary 0 1 | plainify -}}
+    {{- else if findRE `^\{\{[<%]` $line -}}
       {{- $rest := delimit (after $i $lines) "\n" -}}
       {{- $tag := index (split $rest (cond (hasPrefix $line "{{<") ">}}" "%}}")) 0 -}}
       {{- $skipThrough = add $i (sub (len (split $tag "\n")) 1) -}}

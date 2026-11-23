@@ -14,7 +14,7 @@ To render all the animations, run them in the same Nix shell.
 ```sh
 nix develop -c bash -e <<'SH'
 scene_dir=assets/media/reading-notes/frechet-distance/scenes
-for scene in average_log_likelihood sparse_gaussian_mixture latent_variable_likelihood \
+for scene in average_log_likelihood sparse_gaussian_mixture latent_variable_likelihood light_sampling \
   frechet_monte_carlo gaussian_pairings identical_gaussian_pairings frechet_distance_breakdown \
   shared_gaussian_draw rotated_gaussian_draw svd_gaussian_pairing frechet_computation \
   imagenet_pca_inspection
@@ -40,7 +40,8 @@ publish_animation() {
 
 publish_animation average_log_likelihood AverageLogLikelihood average-log-likelihood 10.4
 publish_animation sparse_gaussian_mixture SparseGaussianMixture sparse-gaussian-mixture 8.6
-publish_animation latent_variable_likelihood LatentVariableLikelihood latent-variable-likelihood 25.8
+publish_animation latent_variable_likelihood LatentVariableLikelihood latent-variable-likelihood 11.2
+publish_animation light_sampling LightSampling light-sampling 5.1
 publish_animation frechet_monte_carlo FrechetMonteCarlo frechet-monte-carlo 16.8
 publish_animation gaussian_pairings GaussianPairings gaussian-pairings 14.2
 publish_animation identical_gaussian_pairings IdenticalGaussianPairings identical-gaussian-pairings 25.1

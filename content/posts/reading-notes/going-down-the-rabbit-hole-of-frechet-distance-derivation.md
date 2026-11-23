@@ -18,31 +18,43 @@ How do we check if the model has learned that distribution? We could take a test
 
 {{< post-video src="media/reading-notes/frechet-distance/average-log-likelihood.mp4" poster="media/reading-notes/frechet-distance/average-log-likelihood-poster.png" label="Animation comparing the average log-likelihood of two generative models" caption="The true distribution is a mixture of two Gaussians. Both models score the same four test points in yellow, and Model 1 has the higher average log-likelihood." >}}
 
-A lot of blog posts and tutorials use pictures like this for the "distribution of natural images." I tend to picture natural images (and other kinds of structured data) as small islands in a very high-dimensional space. Try making an image by picking each pixel's color independently at random. You'll almost certainly get a screen full of noise. Real photos take up a tiny part of all the images you could make this way.
+{{< rawhtml >}}<details class="post-aside"><summary>Where natural images live in pixel space</summary>{{< /rawhtml >}}
 
-{{< post-video src="media/reading-notes/frechet-distance/sparse-gaussian-mixture.mp4" poster="media/reading-notes/frechet-distance/sparse-gaussian-mixture-poster.png" label="Animation transitioning from a 2D heatmap to five Gaussian blobs with samples in 3D" caption="The dots are draws from the mixture. If you picked a point uniformly from the whole plotted space, you'd usually land in the gaps between the blobs." >}}
+A lot of blog posts and tutorials use plots like the one in the log-likelihood animation above to illustrate the "distribution of natural images." I tend to picture natural images (and other kinds of structured data) as small islands in a very high-dimensional space. Try making an image by picking each pixel's color independently at random. You'll almost certainly get a screen full of noise. Real photos take up a tiny part of all the images you could make this way.
+
+{{< post-video src="media/reading-notes/frechet-distance/sparse-gaussian-mixture.mp4" poster="media/reading-notes/frechet-distance/sparse-gaussian-mixture-poster.png" label="Animation transitioning from a 2D heatmap to five Gaussian blobs with samples in 3D" caption="Think of this as a sketch of pixel space. Each point represents one image, with coordinates that specify its pixel colors. The islands stand for clusters of similar, plausible photos. Pick a point uniformly at random from pixel space and you'll almost always land between the islands and get an image that looks like noise." >}}
+
+{{< rawhtml >}}</details>{{< /rawhtml >}}
 
 ### The curse of dimensionality
 
 To generate an image $x$ with a **latent-variable model**, we draw $z$ from a simple distribution (say, a Gaussian), then draw $x$ from $p_{\theta}(x \vert z)$.
 
-A denoising diffusion probabilistic model (DDPM), for example, starts with a draw from a standard Gaussian. We use the learned reverse process to turn that noise into an image one step at a time.
+In a diffusion model, $z$ can be the starting noise, drawn from a standard Gaussian. The learned reverse process turns that noise into an image one step at a time. With a deterministic DDIM sampler, rerunning it from the same noise gives the same picture. Standard DDPM sampling adds fresh noise during the reverse process, so the same starting noise can lead to different pictures. [DDIM paper](https://arxiv.org/abs/2010.02502), [DDPM paper](https://arxiv.org/pdf/2006.11239#page=4)
 
-What if we already have a test image and want to know its likelihood $p_{\theta}(x)$? We have to integrate over all possible values of $z$. For each value of $z$, we weight the conditional likelihood $p_{\theta}(x \vert z)$ by the latent density $p(z)$.
+What if we already have a test image $x_i$ and want to know its likelihood? We have to average its conditional likelihood over all the ways the model could draw $z$.
 
 $$
-p_{\theta}(x) = \int p_{\theta}(x \vert z) p(z) \mathrm{d}z
+p_{\theta}(x_i) = \int p_{\theta}(x_i \vert z) p(z) \mathrm{d}z
 $$
 
-Suppose each $z$ gives us one predicted image. We could draw a bunch of values of $z$ and count how often we get back the exact test image $x_i$. If the generated images follow a continuous distribution, the chance of an exact match is zero.
+To estimate the integral by **Monte Carlo**, draw $M$ independent latents from $p(z)$. For each draw, score the same test image $x_i$, then average the scores.
 
-We can put a narrow Gaussian around each prediction so a near miss still contributes. For a given draw of $z$, the density of that Gaussian at $x_i$ gives us $p_{\theta}(x_i \vert z)$.
+$$
+\widehat p_{\theta}(x_i) = \frac{1}{M}\sum_{j=1}^{M}p_{\theta}(x_i \vert z_j), \qquad z_j \sim p(z).
+$$
 
-Now we can draw values of $z$ from $p(z)$ and average those densities to estimate the integral. Predictions near $x_i$ get much more weight. If we rarely draw a $z$ that puts us near $x_i$, we still need a lot of samples for the estimate to converge.
+With deterministic DDIM, each $z$ gives one image. For quantized pixels, we can count exact matches to $x_i$, but those are rare. With continuous pixels, the conditional is a point mass with no ordinary density to average.
 
-{{< post-video src="media/reading-notes/frechet-distance/latent-variable-likelihood.mp4" poster="media/reading-notes/frechet-distance/latent-variable-likelihood-poster.png" label="Animation showing how a latent-variable model estimates log-likelihood by sampling the prior" caption="The generator maps draws from a standard Gaussian into five sparse clusters. For each of four test points, we average the conditional densities from 48 latent draws and then take the log." >}}
+A variational autoencoder (VAE) can put a Gaussian around the image it predicts for each $z$. If the Gaussian is narrow, small differences across many pixels can make the density at $x_i$ tiny. A few close predictions can dominate the average. [*Auto-Encoding Variational Bayes*, Appendix C.2](https://arxiv.org/pdf/1312.6114#page=11)
+
+The animation uses the same draws to count exact matches and evaluate the narrow Gaussian densities.
+
+{{< post-video src="media/reading-notes/frechet-distance/latent-variable-likelihood.mp4" poster="media/reading-notes/frechet-distance/latent-variable-likelihood-poster.png" label="Animation comparing exact matches with narrow Gaussian densities for the same latent draws" caption="None of the 48 draws matches the first test point exactly. With a narrow Gaussian decoder, the three closest predictions account for 99.7% of the sum at that point. For each test point, we average the conditional densities before taking the log." >}}
 
 This reminds me of a problem in path tracing. Say we're shading a diffuse surface lit by a single point light. If we bounce a ray in a random direction, it has zero chance of hitting the light, so the surface comes out black. Give the light a small radius $\epsilon$, and a ray can hit it. Those hits are rare, though, so the render is noisy until we take a lot of samples. With direct light sampling, we pick a point on the light and shoot a shadow ray from the surface to see if anything blocks it.
+
+{{< post-video src="media/reading-notes/frechet-distance/light-sampling.mp4" poster="media/reading-notes/frechet-distance/light-sampling-poster.png" label="3D orbit showing a camera ray from an eye symbol, random bounces, and direct shadow rays in a two-sphere scene" caption="A camera ray hits a point on the checkerboard floor. From that point, the same 24 random directions give zero hits on the point light and one hit on the small sphere light. With direct light sampling, one shadow ray reaches the point light and a second stops at the teal sphere." >}}
 
 {{< figure-row >}}
 {{< figure src="media/reading-notes/frechet-distance/point-light-random.png" alt="A completely black render" width="504" height="360" caption="Random bounce directions miss the point light, leaving the scene black." >}}
@@ -66,9 +78,7 @@ If getting the likelihood of each test image takes this many samples, what else 
 4. Compute the mean vector and covariance matrix of the features in each set. That gives us two multivariate Gaussians, one for real images and one for generated images.
 5. Use the **Fréchet distance** to compare the two Gaussians. FID is the squared distance, so the closer the fits are, the lower the score.
 
-Fitting a Gaussian to each set means we're treating the encoded features as **Gaussian distributed**. Say the features from the test set and the generated set have the same mean and covariance. The two distributions can look quite different and still give us the same Gaussian fit.
-
-{{< figure src="media/reading-notes/frechet-distance/matching-gaussian-moments.png" alt="A single tilted Gaussian on the left and four separate peaks on the right. Both panels have the same mean and covariance ellipse." width="1920" height="1080" caption="The yellow dots mark the shared mean, and the dashed ellipses show the shared covariance. The Gaussian fits are identical, so FID is zero in this example." >}}
+The Gaussians approximate the distributions of encoded features. We'll derive the distance between them first, then [come back to how well that approximation holds up](#elephant-in-the-room-does-it-make-sense-to-assume-images-are-gaussian-distributed).
 
 ## Frechet distance
 
@@ -97,15 +107,15 @@ We'll work through where those two terms come from, step by step.
 
 Let's start with $d = 1$. Each image gives us a single feature value, so our Gaussian fits are $\mathcal{N}(\mu_r, \sigma_r^2)$ and $\mathcal{N}(\mu_g, \sigma_g^2)$. Here $\sigma_r$ and $\sigma_g$ are the standard deviations.
 
-Say the two curves have the same width. To line them up, we just slide one over by the difference in their means. The squared shift is $(\mu_r - \mu_g)^2$.
-
-To see the difference in spread, line up the centers. For each curve, make a mark on the horizontal axis one standard deviation to the right of the center. The squared gap between those marks is $(\sigma_r - \sigma_g)^2$.
+The term $(\mu_r - \mu_g)^2$ is the squared distance between the means, and $(\sigma_r - \sigma_g)^2$ is the squared difference between the standard deviations.
 
 Put the two terms together and we get the squared Fréchet distance in 1D.
 
 $$
 d_{\mathrm{F}}^2 = (\mu_r - \mu_g)^2 + (\sigma_r - \sigma_g)^2
 $$
+
+For two identical Gaussians, the means and standard deviations match, so the Fréchet distance is zero.
 
 Things get trickier in higher dimensions. The means are vectors now, so we can measure the squared shift with $\lVert \mu_r - \mu_g \rVert_2^2$. How do we compare the two covariance matrices? Let's stay in 1D a little longer and see where the spread term $(\sigma_r - \sigma_g)^2$ comes from.
 
@@ -128,13 +138,19 @@ Since both means are zero, $\mathbb{E}[X^2]$ and $\mathbb{E}[Y^2]$ are just the 
 
 {{< post-video src="media/reading-notes/frechet-distance/gaussian-pairings.mp4" poster="media/reading-notes/frechet-distance/gaussian-pairings-poster.png" label="Monte Carlo comparison of independent, shared, and sign-flipped pairings of two Gaussians" caption="Each run averages the squared gaps from 16,384 pairs. The red dashed line shows the exact expectation for that pairing." >}}
 
-Which pairing should we use? Give both Gaussians a standard deviation of $2$, so they both follow $\mathcal{N}(0, 4)$. Independent draws give an average squared gap of $8$, and pairing $X=2Z$ with $Y=-2Z$ gives $16$. With $X=Y=2Z$, every gap is zero. A squared gap is always nonnegative, so its average can be zero only if $X=Y$ with probability one.
+Which of these three pairings should we use? Let's try another example, this time with two identical Gaussians. Both have mean $0$ and standard deviation $2$, so they're both $\mathcal{N}(0, 4)$. We know their Fréchet distance should be zero.
+
+1. Independent draws give an average squared gap of $4 + 4 = 8$.
+2. A shared draw with the same sign gives $X = Y = 2Z$, so every gap is zero.
+3. A shared draw with opposite signs gives $X = 2Z$ and $Y = -2Z$. The average squared gap is $\mathbb{E}[(4Z)^2] = 16$.
+
+Of these three pairings, sharing the draw with the same sign is the only one that reaches zero, the smallest possible average squared gap.
 
 {{< post-video src="media/reading-notes/frechet-distance/identical-gaussian-pairings.mp4" poster="media/reading-notes/frechet-distance/identical-gaussian-pairings-poster.png" label="Monte Carlo comparison of three pairings for two identical Gaussians, with zero squared gap for shared draws" caption="The dashed green curve lies on top of the blue one. In the shared-draw run, both values land on the same point in every pair." >}}
 
-So we look for the pairing that gives the smallest $\mathbb{E}[(X-Y)^2]$ while keeping the two distributions fixed. The variances are already set, so minimizing the gap comes down to maximizing $\mathbb{E}[XY]$. By Cauchy-Schwarz, that term can be at most $\sqrt{\mathbb{E}[X^2]\mathbb{E}[Y^2]} = \sigma_r\sigma_g$.
+Does sharing the draw still give the smallest gap when the standard deviations differ? The variances are already set, so minimizing the gap comes down to maximizing $\mathbb{E}[XY]$. By Cauchy-Schwarz, that term can be at most $\sqrt{\mathbb{E}[X^2]\mathbb{E}[Y^2]} = \sigma_r\sigma_g$.
 
-We can reach that bound by using the same standard-normal draw for both points. Draw $Z \sim \mathcal{N}(0, 1)$ and set $X = \sigma_r Z$ and $Y = \sigma_g Z$. Since $\mathbb{E}[Z^2] = 1$, this gives us $\mathbb{E}[XY] = \sigma_r\sigma_g$. Plug that in and we get the smallest possible average squared gap.
+Draw one $Z \sim \mathcal{N}(0, 1)$ and set $X = \sigma_r Z$ and $Y = \sigma_g Z$. Since $\mathbb{E}[Z^2] = 1$, this gives us $\mathbb{E}[XY] = \sigma_r\sigma_g$, right at the bound. So the same-sign shared draw is the pairing we want in 1D. Its average squared gap is
 
 $$
 \sigma_r^2 + \sigma_g^2 - 2\sigma_r\sigma_g = (\sigma_r - \sigma_g)^2.
@@ -211,11 +227,11 @@ $$
 
 {{< post-video src="media/reading-notes/frechet-distance/rotated-gaussian-draw.mp4" poster="media/reading-notes/frechet-distance/rotated-gaussian-draw-poster.png" label="A rotation changes the expected squared gap between paired draws from two identical 2D Gaussians" caption="The density contours agree at every angle. The red readout shows the expected squared gap for the displayed pairing." >}}
 
-At $90^\circ$, the expected squared gap is $4$. Set $\theta=0$ and every pair lands on the same point. That gives us zero, the squared Fréchet distance between the two identical Gaussians.
+At $90^\circ$, the expected squared gap is $4$. Set $\theta=0$ and every pair lands on the same point. That gives us **zero Fréchet distance** between the two identical Gaussians.
 
-Back in 1D, we had several ways to **pair the draws**. We could draw them independently, use the same $Z$ for both, or flip its sign for one of them. All three gave us the right distributions for $X$ and $Y$. We picked $X=\sigma_r Z$ and $Y=\sigma_g Z$ because it **minimizes the expected squared gap**. When the distributions match, this pairing makes $X=Y$ for every draw, which gives us **zero Fréchet distance**.
+Just like in 1D, we get to choose how to **pair the draws**. Using $Z$ or $-Z$ for the second draw changed which values got paired while keeping both distributions fixed. In 2D, the rotation angle gives us a new degree of freedom. A half-turn gives $R_\pi Z=-Z$, just like the sign flip in 1D.
 
-In 2D, the angle gives us infinitely many choices. Every rotation matrix $R$ gives us a valid pairing $X=\Sigma_r^{1/2}Z$ and $Y=\Sigma_g^{1/2}RZ$, since $RZ$ is still standard Gaussian. We want the rotation that makes $\mathbb{E}[\lVert X-Y\rVert_2^2]$ as small as possible.
+Every rotation matrix $R$ gives us a valid pairing $X=\Sigma_r^{1/2}Z$ and $Y=\Sigma_g^{1/2}RZ$, since $RZ$ is still standard Gaussian. We want the rotation that **minimizes the expected squared gap** $\mathbb{E}[\lVert X-Y\rVert_2^2]$.
 
 With $X$ and $Y$ centered, the same expansion we used in 1D gives
 
@@ -240,7 +256,7 @@ I'll assume both covariance matrices are positive definite here, so we can also 
 Let $w=A^\top BV$. The diagonal of $wU^\top$ has entries $w_i U_i$, so
 
 $$
-\operatorname{tr}(wU^\top)=\sum_i w_i U_i=U^\top w=U^\top A^\top BV.
+U^\top A^\top BV=U^\top w=\sum_i w_i U_i=\operatorname{tr}(wU^\top).
 $$
 
 This puts $VU^\top$ inside the trace, where we can take its expectation. Since $B$ is symmetric, $M^\top=A^\top B$.
@@ -257,7 +273,7 @@ $$
 
 If $M$ were diagonal, the trace would just be $\sum_i M_{ii}C_{ii}$. We get to choose how $U$ and $V$ are paired, so why not take the singular value decomposition of $M$ and absorb the orthogonal factors into the draws?
 
-Write $M=PDQ^\top$, where $P$ and $Q$ are orthogonal and $D$ is the diagonal matrix of singular values $s_i$. Then
+Write the SVD of $M$ as $M=PDQ^\top$, where $P$ and $Q$ are orthogonal and $D$ is the diagonal matrix of singular values $s_i$. Then
 
 $$
 \operatorname{tr}(M^\top C)
@@ -265,11 +281,13 @@ $$
 = \operatorname{tr}(D P^\top C Q).
 $$
 
-> **Linear algebra trick**
->
-> The trace stays the same when we cycle the factors. Here, set $S=DP^\top C$ to see why we can move $Q$ to the end.
->
-> $$\operatorname{tr}(QS) = \sum_{i,j}Q_{ij}S_{ji} = \sum_{j,i}S_{ji}Q_{ij} = \operatorname{tr}(SQ).$$
+{{< rawhtml >}}<details class="post-aside"><summary>Linear algebra trick</summary>{{< /rawhtml >}}
+
+The trace stays the same when we cycle the factors. Here, set $S=DP^\top C$ to see why we can move $Q$ to the end.
+
+$$\operatorname{tr}(QS) = \sum_{i,j}Q_{ij}S_{ji} = \sum_{j,i}S_{ji}Q_{ij} = \operatorname{tr}(SQ).$$
+
+{{< rawhtml >}}</details>{{< /rawhtml >}}
 
 Substituting $C=\mathbb{E}[VU^\top]$ gives
 
@@ -404,9 +422,13 @@ $$
 
 ## Elephant in the room: Does it make sense to assume images are Gaussian distributed?
 
-Now that we've worked through the Fréchet distance derivation in FID, let's go back to the assumption we made about the encoded image features. Does it make sense to treat them as Gaussian distributed?
+Now that we've worked through the Fréchet distance derivation, let's spend the last few minutes on the assumption we've been using all along. Does it make sense to treat the encoded image features as Gaussian distributed?
 
-Well, we can run a simple experiment to find out. I ran the Inception-v3 feature extractor on 8,192 images from the ImageNetV2 Matched Frequency test set. That gave me a 2,048-dimensional feature vector for each image. Then I used principal component analysis (PCA) to project those features onto a 2D plane.
+A Gaussian fit can hide structure in the encoded features. A single cloud and several separate clusters can have the same mean and covariance.
+
+{{< figure src="media/reading-notes/frechet-distance/matching-gaussian-moments.png" alt="A single tilted Gaussian on the left and four separate peaks on the right. Both panels have the same mean and covariance ellipse." width="1920" height="1080" caption="The yellow dots mark the shared mean, and the dashed ellipses show the shared covariance. The Gaussian fits are identical, so FID is zero in this example." >}}
+
+To get a first look at real image features, I ran the Inception-v3 feature extractor on 8,192 images from the ImageNetV2 Matched Frequency test set. That gave me a 2,048-dimensional feature vector for each image. Then I used principal component analysis (PCA) to project those features onto a 2D plane.
 
 I picked a few points around the plot to see which images they came from.
 

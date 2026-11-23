@@ -44,3 +44,13 @@
   max-width: 100%;
   height: auto;
 }
+
+.post-aside {
+  margin-block: 1rem;
+  padding: 0.5rem 1rem;
+  border-inline-start: 2px solid var(--code-border);
+}
+
+.post-aside > summary {
+  cursor: pointer;
+}
